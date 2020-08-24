@@ -266,10 +266,13 @@ std::string HttpRequest::createRequest()
     }
   }
   for (const auto& builtinHd : builtinHds) {
-    auto it = std::find_if(std::begin(headers_), std::end(headers_),
-                           [&builtinHd](const std::string& hd) {
-                             return util::istartsWith(hd, builtinHd.first);
-                           });
+    auto it = std::end(headers_);
+    if (!util::istartsWith(builtinHd.first, "range:")) {
+      it = std::find_if(std::begin(headers_), std::end(headers_),
+                             [&builtinHd](const std::string& hd) {
+                               return util::istartsWith(hd, builtinHd.first);
+                             });
+    }
     if (it == std::end(headers_)) {
       requestLine += builtinHd.first;
       requestLine += ' ';
@@ -279,6 +282,15 @@ std::string HttpRequest::createRequest()
   }
   // append additional headers given by user.
   for (const auto& hd : headers_) {
+    if (util::istartsWith(hd, "range:")) {
+      auto it = std::find_if(std::begin(builtinHds), std::end(builtinHds),
+                             [](std::pair<std::string, std::string>& h) {
+                               return util::istartsWith(h.first, "range:");
+                             });
+      if (it != std::end(builtinHds)) {
+        continue;
+      }
+    }
     requestLine += hd;
     requestLine += "\r\n";
   }
